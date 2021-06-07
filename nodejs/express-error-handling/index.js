@@ -6,6 +6,7 @@ const {
   rejectPromiseError,
   throwError,
 } = require('./services/callAPI');
+const catchAsync = require('./utils/catchAsync');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -29,15 +30,34 @@ app.get('/api/users', async (req, res, next) => {
   }
 });
 
-// Error middleware
-// If use async/await error middleware must be the last one
-app.use(function logErrors(err, req, res, next) {
-  console.log('Error middleware');
-  console.error(err.stack);
-  next(err);
-  console.log('after next in error middleware');
+app.get(
+  '/catch',
+  catchAsync(async (req, res, next) => {
+    const foo = await Promise.resolve('I GOT FOO');
+
+    await Promise.reject(new Error('Foo Error: YOU GOT BAR'));
+
+    res.end(foo);
+  })
+);
+
+app.get('/error', async (req, res, next) => {
+  try {
+    console.log(typeof Promise.reject(new Error('SHAME ON YOU')));
+    Promise.reject(new Error('SHAME ON YOU'));
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.listen(5000, () => {
-  console.log('server is listening on port 5000');
+// Error middleware
+// If use async/await error middleware must be the last one
+app.use(function (err, req, res, next) {
+  console.log('Error middleware');
+  console.error(err.message);
+  next(err.message);
+});
+
+app.listen(3400, () => {
+  console.log('server is listening on port 3400');
 });
